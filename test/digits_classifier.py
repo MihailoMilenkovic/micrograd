@@ -15,15 +15,15 @@ import dill
 from sklearn.datasets import load_digits
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split,StratifiedShuffleSplit
 
 from micrograd.engine import Value
 from micrograd.nn import Linear, Sigmoid, BinaryCrossEntropyLoss, Sequential, Module, Softmax, CrossEntropyLoss
 from micrograd.optimizers import SGD, Adam
 from micrograd.metrics import Metrics
 
-def create_dataset():
-    # Load the Iris dataset
+def preprocess_dataset():
+    # Load the digits dataset
     digits = load_digits()
 
     # Extract the features (X) and target labels (y)
@@ -37,6 +37,9 @@ def create_dataset():
 
     # Shuffle the dataset
     X, y = shuffle(X, y, random_state=42)
+    return X,y
+
+def create_train_test_dataset(X,y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 
@@ -48,6 +51,7 @@ def create_dataset():
     
 
     return X_train, X_test, y_train, y_test
+
 
 def convert_to_micrograd(X,y):
     # Convert the dataset to micrograd values
@@ -116,7 +120,9 @@ def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
     train_metrics = Metrics(["loss", "accuracy"], name="train_metrics")
     test_metrics = Metrics(["loss", "accuracy"], name="test_metrics")
     train_metric_out=[]
+    train_metric_data=[]
     test_metric_out=[]
+    test_metric_data=[]
     for epoch in range(epochs):
         for i, (x_, y_) in enumerate(zip(x_train, y_train)):
             pred = model(x_)
@@ -130,8 +136,9 @@ def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
             # zero gradients
             model.zero_grad()
             loss.destroy_graph(model.parameters())
-        train_metric_out.append(train_metrics.report(epoch, epochs))
-        
+        metric_out,metric_data=train_metrics.report(epoch, epochs)
+        train_metric_out.append(metric_out)
+        train_metric_data.append(metric_data)
         #record metrics on test set
         for i, (x_, y_) in enumerate(zip(x_test, y_test)):
             pred = model(x_)
@@ -142,15 +149,46 @@ def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
             model.zero_grad()
             loss.destroy_graph(model.parameters())
         
-        test_metric_out.append(test_metrics.report(epoch, epochs))
+        metric_out,metric_data=test_metrics.report(epoch, epochs)
+        test_metric_out.append(metric_out)
+        test_metric_data.append(metric_data)
 
         save_model(model,f"{model_path}_epoch_{epoch}")
 
     save_model(model, model_path,train_metrics=train_metric_out,test_metrics=test_metric_out)
+    return train_metric_data,test_metric_data
 
 
 if __name__=="__main__":
-    X_train, X_test, y_train, y_test=create_dataset()
-    X_train,y_train=convert_to_micrograd(X_train,y_train)
-    X_test,y_test=convert_to_micrograd(X_test,y_test)
-    train_model(X_train,X_test,y_train,y_test,model_type="mlp",epochs=10,load=False)
+    k_fold=True
+    X,y=preprocess_dataset()
+    print("X:",X,"y:",y)
+    if not k_fold:
+        X_train, X_test, y_train, y_test=create_train_test_dataset(X,y)
+        X_train,y_train=convert_to_micrograd(X_train,y_train)
+        X_test,y_test=convert_to_micrograd(X_test,y_test)
+        train_model(X_train,X_test,y_train,y_test,model_type="mlp",epochs=10,load=False)
+    else:
+        num_folds=2
+        sss=StratifiedShuffleSplit(n_splits=num_folds)
+        all_metrics={}
+        all_metrics["train_loss"]=[]
+        all_metrics["train_accuracy"]=[]
+        all_metrics["test_loss"]=[]
+        all_metrics["test_accuracy"]=[]
+        for train,test in sss.split(X,y):
+            X_train,y_train=X[train],y[train]
+            X_test,y_test=X[test],y[test]
+            X_train,y_train=convert_to_micrograd(X_train,y_train)
+            X_test,y_test=convert_to_micrograd(X_test,y_test)
+            num_epochs=1
+            train_metric_data,test_metric_data=train_model(X_train,X_test,y_train,y_test,model_type="mlp",epochs=num_epochs,load=False)
+            metric_data={"train":train_metric_data,"test":test_metric_data}
+            for dataset_type in ["train","test"]:
+                curr_metric_data=metric_data[dataset_type]
+                for metric in ["loss","accuracy"]:
+                    all_metrics[f"{dataset_type}_{metric}"].append(curr_metric_data[num_epochs-1][metric])
+        print("Results after k-fold cross-validation:")
+        for metric in all_metrics:
+            avg_value=sum(all_metrics[metric])/len(all_metrics[metric])
+            print(f"Average {metric}:{avg_value}")

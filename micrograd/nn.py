@@ -103,19 +103,26 @@ class MLP(Module):
         return f"MLP of [{', '.join(str(layer) for layer in self.layers)}]"
 
 class Conv2D(Module):
-    def __init__(self,num_filters=1,filter_size=(3,3),input_size=(8,8),padding="none",use_bias=True,strides=(1,1)):
-        assert padding in ["none","same"]
-        self.filters=[Linear(filter_size[0]*filter_size[1],use_bias=use_bias) for _ in range(num_filters)]
-        self.feature_size=((input_size[i]-filter_size[i])//strides[i] for i in range(2))
+    def __init__(self,out_channels=1,kernel_size=(3,3),input_shape=(1,8,8),padding_type="none",use_bias=True,stride=(1,1)):
+        assert padding_type in ["none"] #TODO: add same padding
+        c_in,h_in,w_in=input_shape
+        self.padding=(0,0)
+        self.dilation=(1,1)
+        self.stride=stride
+        self.kernel_size=kernel_size
+        self.c_out=out_channels
+        self.h_out=math.floor((h_in+2*self.padding[0]-self.dilation[0]*(kernel_size[0]-1)-1)/stride[0]+1)
+        self.w_out=math.floor((w_in+2*self.padding[1]-self.dilation[1]*(kernel_size[1]-1)-1)/stride[1]+1)
+
+        self.filters=[Linear(kernel_size[0]*kernel_size[1],use_bias=use_bias) for _ in range(self.c_out)]
         self.feature_maps=[
-            Linear(self.feature_size[0]*self.feature_size[1]) for _ in range(num_filters)
+            Linear(self.h_out*self.w_out) for _ in range(self.c_out)
         ]
-        self.padding=padding
-        self.strides=strides
+        
     def call(self,x):
         for curr_filter,idx in enumerate(self.filters):
             start_pos_x=0
-            end_pos_x=len(x[0])-self.filter_size
+            end_pos_x=len(x[0])-self.kernel_size
             start_pos_y=0
             end_pos_y=len(x[0])
             for x_start,x_cnt in enumerate(range(start_pos_x,end_pos_x,self.stride)):
@@ -124,15 +131,15 @@ class Conv2D(Module):
                         #TODO: double check start/end pos
                         curr_positions=[
                             x_curr*self.input_size+y_curr 
-                            for x_curr in range(x_start,x_start+self.filter_size[0]) 
-                            for y_curr in range(y_start,y_start+self.filter_size[1])
+                            for x_curr in range(x_start,x_start+self.kernel_size[0]) 
+                            for y_curr in range(y_start,y_start+self.kernel_size[1])
                         ]
                     else:
                         #TODO: double check start/end pos
                         curr_positions=[
                             x_curr*self.input_size+y_curr 
-                            for x_curr in range(x_start,x_start+self.filter_size[0]) 
-                            for y_curr in range(y_start,y_start+self.filter_size[1])
+                            for x_curr in range(x_start,x_start+self.kernel_size[0]) 
+                            for y_curr in range(y_start,y_start+self.kernel_size[1])
                         ]
                     curr_inputs=[x[t] for t in curr_positions]
                     self.feature_maps[idx][x_cnt][y_cnt]+=curr_filter(curr_inputs)
@@ -143,12 +150,63 @@ class Conv2D(Module):
 
 
 class MaxPool2D(Module):
-    def __init__(self,input_size=(8,8),strides=(2,2)):
-        pass    
+    def __init__(self,out_channels=1,kernel_size=(3,3),input_shape=(1,8,8),padding_type="none",use_bias=True,stride=(1,1)):
+        assert padding_type in ["none"] #TODO: add same padding
+        c_in,h_in,w_in=input_shape
+        self.padding=(0,0)
+        self.dilation=(1,1)
+        self.stride=stride
+        self.kernel_size=kernel_size
+        self.c_out=out_channels
+        self.h_out=math.floor((h_in+2*self.padding[0]-self.dilation[0]*(kernel_size[0]-1)-1)/stride[0]+1)
+        self.w_out=math.floor((w_in+2*self.padding[1]-self.dilation[1]*(kernel_size[1]-1)-1)/stride[1]+1)
+
+        self.filters=[Linear(kernel_size[0]*kernel_size[1],use_bias=use_bias) for _ in range(self.c_out)]
+        self.feature_maps=[
+            Linear(self.h_out*self.w_out) for _ in range(self.c_out)
+        ]
+        
     def call(self,x):
-        pass
+        for curr_filter,idx in enumerate(self.filters):
+            start_pos_x=0
+            end_pos_x=len(x[0])-self.kernel_size
+            start_pos_y=0
+            end_pos_y=len(x[0])
+            for x_start,x_cnt in enumerate(range(start_pos_x,end_pos_x,self.stride)):
+                for y_start,y_cnt in enumerate(range(start_pos_y,end_pos_y,self.stride)):
+                    if self.padding=="same":
+                        #TODO: double check start/end pos
+                        curr_positions=[
+                            x_curr*self.input_size+y_curr 
+                            for x_curr in range(x_start,x_start+self.kernel_size[0]) 
+                            for y_curr in range(y_start,y_start+self.kernel_size[1])
+                        ]
+                    else:
+                        #TODO: double check start/end pos
+                        curr_positions=[
+                            x_curr*self.input_size+y_curr 
+                            for x_curr in range(x_start,x_start+self.kernel_size[0]) 
+                            for y_curr in range(y_start,y_start+self.kernel_size[1])
+                        ]
+                    curr_inputs=[x[t] for t in curr_positions]
+                    self.feature_maps[idx][x_cnt][y_cnt]+=curr_filter(curr_inputs)
+            return self.feature_maps
     def parameters(self):
         pass
+
+class Flatten(Module):
+    def __init__(self):
+        pass
+    def call(self,x):
+        if isinstance(x,list):
+            out=[]
+            for a in x:
+                out.append(Flatten(a))
+            return out
+        else:
+            return x
+    def parameters(self):
+        return []
 
 class Softmax(Module):
     #TODO: use more numerically stable version where we divide everything by max value

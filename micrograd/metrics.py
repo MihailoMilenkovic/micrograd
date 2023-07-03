@@ -37,12 +37,14 @@ class Metrics:
 
     def report(self, epoch: int, total_epochs: int):
         output = f"{self.name} - epoch: {epoch + 1}/{total_epochs}"
+        metrics_out={}
         for metric in self.metrics:
             output += f" | {metric.capitalize()}: {self.calculate_metric_by_epoch(metric, epoch + 1):.4f}"
+            metrics_out[metric]=self.calculate_metric_by_epoch(metric, epoch + 1)
         output += "\n"
         output += "-" * len(output)
         print(output)
-        return output
+        return output,metrics_out
         
 
     def calculate_metric_by_epoch(self, metric: str, epoch: int) -> float:
