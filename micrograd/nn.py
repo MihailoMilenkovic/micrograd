@@ -102,147 +102,242 @@ class MLP(Module):
     def __repr__(self):
         return f"MLP of [{', '.join(str(layer) for layer in self.layers)}]"
 
-class TrainableMatrix(Module):
-    #TODO: add bias as option
-    def __init__(self, height, width):
-        self.width=width
-        self.height=height
-        self.values=[[Value(random.uniform(-1,1)) for _ in range(width)] for _ in range(height)]
-        self.outputs=[Value(0) for _ in range(height)]
-    #this is sort of the same thing as Linear above, except we have everything in one place, which makes it easier to do matmul, etc.
-    def __call__(self,x):
-        for i in range(self.height):
-            for j in range(self.width):
-                self.outputs[i]+=self.values[j]*x[j]
-        return self.outputs
-    def parameters(self):
-        return [p for row in self.values for p in row]
-    
-    def __repr__(self):
-        pass
-    
-class MatMul(Module):
-    def __init__(self, mat1, mat2):
-        self.mat1=mat1
-        self.mat2=mat2
-        assert mat1.width==mat2.height
-        self.out=TrainableMatrix(mat1.height,mat2.width)
-    def __call__(self, mat1, mat2, transpose_b=False):
-        if not transpose_b:
-            for i in range(mat1.height):
-                for j in range(mat2.width):
-                    for k in range(mat1.width):
-                        self.out[i][j]+=mat1[i][k]*mat2[k][j]
-        else:
-            for i in range(mat1.height):
-                for j in range(mat2.height):
-                    for k in range(mat1.width):
-                        self.out[i][j]==mat1[i][k]*mat2[j][k]
-        return self.out
+class Conv2D(Module):
+    def __init__(self,num_filters=1,filter_size=(3,3),input_size=(8,8),padding="none",use_bias=True,strides=(1,1)):
+        assert padding in ["none","same"]
+        self.filters=[Linear(filter_size[0]*filter_size[1],use_bias=use_bias) for _ in range(num_filters)]
+        self.feature_size=((input_size[i]-filter_size[i])//strides[i] for i in range(2))
+        self.feature_maps=[
+            Linear(self.feature_size[0]*self.feature_size[1]) for _ in range(num_filters)
+        ]
+        self.padding=padding
+        self.strides=strides
+    def call(self,x):
+        for curr_filter,idx in enumerate(self.filters):
+            start_pos_x=0
+            end_pos_x=len(x[0])-self.filter_size
+            start_pos_y=0
+            end_pos_y=len(x[0])
+            for x_start,x_cnt in enumerate(range(start_pos_x,end_pos_x,self.stride)):
+                for y_start,y_cnt in enumerate(range(start_pos_y,end_pos_y,self.stride)):
+                    if self.padding=="same":
+                        #TODO: double check start/end pos
+                        curr_positions=[
+                            x_curr*self.input_size+y_curr 
+                            for x_curr in range(x_start,x_start+self.filter_size[0]) 
+                            for y_curr in range(y_start,y_start+self.filter_size[1])
+                        ]
+                    else:
+                        #TODO: double check start/end pos
+                        curr_positions=[
+                            x_curr*self.input_size+y_curr 
+                            for x_curr in range(x_start,x_start+self.filter_size[0]) 
+                            for y_curr in range(y_start,y_start+self.filter_size[1])
+                        ]
+                    curr_inputs=[x[t] for t in curr_positions]
+                    self.feature_maps[idx][x_cnt][y_cnt]+=curr_filter(curr_inputs)
+            return self.feature_maps
         
     def parameters(self):
-        return self.mat1.parameters()+self.mat2.parameters()+self.out.parameters()
+        return [p for filter in self.filters for p in filter.parameters()]
 
-class Scale(Module):
-    def __init__(self,mat,k):
-        self.k=k
-        self.mat=mat
-    def __call__(self,mat,k):
-        for i in range(len(mat.values)):
-            for j in range(len(mat.values[0])):
-                mat[i][j]/=k
-        return mat
 
-class CausalAttentionMask(Module):
-    def __init__(self,mat):
-        assert mat.width==mat.height
-        self.mat=mat
-        self.n_embd=math.width
-    def __call__(self,mat):
-        for i in range(self.n_embd):
-            for j in range(i):
-                mat.values[i][j]=Value(float('-inf'))
-        return mat
-    def parameters(self):
-        return self.mat.parameters()
 
-class CausalAttentionHead(Module):
-    #TODO: figure out how to fit attention into this framework
-    def __init__(self, n_embd, n_head,use_bias=False):
-        assert n_embd%n_head==0
-        self.n_embd=n_embd
-        self.n_head=n_head
-        self.head_size = n_embd // n_head
-        # self.wq=TrainableMatrix(n_embd,n_embd)
-        # self.wk=TrainableMatrix(n_embd,n_embd)
-        # self.wv=TrainableMatrix(n_embd,n_embd)
-        # self.q=TrainableMatrix(n_embd,n_embd)
-        # self.k=TrainableMatrix(n_embd,n_embd)
-        # self.v=TrainableMatrix(n_embd,n_embd)
-
-        self.wq = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
-        self.wk = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
-        self.wv = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
-
-        self.proj = Linear(n_embd, n_embd, nonlin=False, use_bias=use_bias)
-
-    def __call__(self, x):
-        n, embd_size = x.size() # this works for python lists, but not for values
-        assert embd_size == self.n_embd
-        #we need to project our input x to matrices wiq, wik, wiv (https://arxiv.org/pdf/1706.03762.pdf, page 5)
-        # self.wq=self.wq(x)
-        # self.wk=self.wk(x)
-        # self.wv=self.wv(x)
-        # q_proj=MatMul(q,wq)
-        # k_proj=MatMul(k,wk)
-        # v_proj=MatMul(v,wv)
-        self.q = [self.wq[i](x) for i in range(self.n_head)] # (nh, n, hs)
-        self.k = [self.wk[i](x) for i in range(self.n_head)] # (nh, n, hs)
-        self.v = [self.wv[i](x) for i in range(self.n_head)] # (nh, n, hs)
-
-        z = [MatMul(Scale(MatMul(self.q[i], self.k[i], transpose_b=True), math.sqrt(self.head_size)), self.v[i]) for i in range(self.n_head)]
-        # concatenate z
-        # mask z
-        # softmax on z
-
-        return self.proj(z)
-
-    def parameters(self):
-        return self.wq.parameters()+self.wk.parameters()+self.wv.parameters()
-        + self.q.parameters()+self.k.parameters()+self.v.parameters()
-
-    def __repr__(self):
+class Softmax(Module):
+    #TODO: use more numerically stable version where we divide everything by max value
+    def __init__(self):
         pass
 
-class Concat(Module):
-    #concatenate multiple matrices into one
-    def __init__():
-        pass
-    def __call__():
-        pass
+    def __call__(self, values):
+        sum_exp = Value(0)
+        out_values = []
+        for val in values:
+            sum_exp+=val.exp()
+        for val in values:
+            out_values.append(val.exp()/sum_exp)
+        return out_values
     
-class MultiHeadAttention(Module):
-    #TODO
-    def __init__(self, n_embd,n_head,use_bias=False):
-        assert n_embd%n_head==0
-        self.n_embd=n_embd
-        self.n_head=n_head
-        self.single_head_dim=n_embd//n_head
-        self.attention_layers=[CausalAttentionHead(self.single_head_dim,use_bias=use_bias) for _ in range(n_head)]
-        self.wo=TrainableMatrix(n_embd,self.single_head_dim)
-    def __call__(self,x):
-        attn_outs=[self.attention_layers[i](x) for i in range(self.n_head)]
-        attn_concat=Concat(attn_outs)
-        out=MatMul(attn_concat,self.wo)
-    def parameters(self):
-        return [att.parameters() for att in self.attention_layers]+self.wo.parameters()
-    def __repr__(self):
+class Sigmoid(Module):
+    def __init__(self):
+        pass
+    def __call__(self, values):
+        outs = []
+        for value in values:
+            outs.append(1 / (1 + (-value).exp()))
+        return outs
+
+class CrossEntropyLoss(Module):
+    #TODO: check that everything is fine with logits vs self.logits, etc.
+    def __init__(self, reduction="mean", epsilon=1e-8):
+        #only supporting unweighted cross-entropy loss
+        self.reduction = reduction
+        self.epsilon = epsilon
+        assert(self.reduction in ["mean","sum"])
+    def __call__(self, logits, values):
+        loss = Value(0)
+        num_classes = len(values)
+        for logit, label in zip(logits,values):
+            logit_clipped = logit.clip(self.epsilon,1-self.epsilon)
+            loss-=logit_clipped.log()*label
+        if self.reduction=="mean":
+            return loss/num_classes
+        return loss
+
+class BinaryCrossEntropyLoss(Module):
+    
+    def __init__(self):
         pass
 
+    def __call__(self, logit, label):
+        if isinstance(logit, list):
+            logit = logit[0]
+        if isinstance(label, list):
+            label = label[0]
+       
+        assert isinstance(logit, Value) and isinstance(label, Value)
+        return -label * logit.log() -(1 - label) * (1 - logit).log()
+       
+# class TrainableMatrix(Module):
+#     #TODO: add bias as option
+#     def __init__(self, height, width):
+#         self.width=width
+#         self.height=height
+#         self.values=[[Value(random.uniform(-1,1)) for _ in range(width)] for _ in range(height)]
+#         self.outputs=[Value(0) for _ in range(height)]
+#     #this is sort of the same thing as Linear above, except we have everything in one place, which makes it easier to do matmul, etc.
+#     def __call__(self,x):
+#         for i in range(self.height):
+#             for j in range(self.width):
+#                 self.outputs[i]+=self.values[j]*x[j]
+#         return self.outputs
+#     def parameters(self):
+#         return [p for row in self.values for p in row]
+    
+#     def __repr__(self):
+#         pass
+    
+# class MatMul(Module):
+#     def __init__(self, mat1, mat2):
+#         self.mat1=mat1
+#         self.mat2=mat2
+#         assert mat1.width==mat2.height
+#         self.out=TrainableMatrix(mat1.height,mat2.width)
+#     def __call__(self, mat1, mat2, transpose_b=False):
+#         if not transpose_b:
+#             for i in range(mat1.height):
+#                 for j in range(mat2.width):
+#                     for k in range(mat1.width):
+#                         self.out[i][j]+=mat1[i][k]*mat2[k][j]
+#         else:
+#             for i in range(mat1.height):
+#                 for j in range(mat2.height):
+#                     for k in range(mat1.width):
+#                         self.out[i][j]==mat1[i][k]*mat2[j][k]
+#         return self.out
+        
+#     def parameters(self):
+#         return self.mat1.parameters()+self.mat2.parameters()+self.out.parameters()
 
-class LayerNorm(Module):
-    #TODO
-    pass
+# class Scale(Module):
+#     def __init__(self,mat,k):
+#         self.k=k
+#         self.mat=mat
+#     def __call__(self,mat,k):
+#         for i in range(len(mat.values)):
+#             for j in range(len(mat.values[0])):
+#                 mat[i][j]/=k
+#         return mat
+
+# class CausalAttentionMask(Module):
+#     def __init__(self,mat):
+#         assert mat.width==mat.height
+#         self.mat=mat
+#         self.n_embd=math.width
+#     def __call__(self,mat):
+#         for i in range(self.n_embd):
+#             for j in range(i):
+#                 mat.values[i][j]=Value(float('-inf'))
+#         return mat
+#     def parameters(self):
+#         return self.mat.parameters()
+
+# class CausalAttentionHead(Module):
+#     #TODO: figure out how to fit attention into this framework
+#     def __init__(self, n_embd, n_head,use_bias=False):
+#         assert n_embd%n_head==0
+#         self.n_embd=n_embd
+#         self.n_head=n_head
+#         self.head_size = n_embd // n_head
+#         # self.wq=TrainableMatrix(n_embd,n_embd)
+#         # self.wk=TrainableMatrix(n_embd,n_embd)
+#         # self.wv=TrainableMatrix(n_embd,n_embd)
+#         # self.q=TrainableMatrix(n_embd,n_embd)
+#         # self.k=TrainableMatrix(n_embd,n_embd)
+#         # self.v=TrainableMatrix(n_embd,n_embd)
+
+#         self.wq = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
+#         self.wk = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
+#         self.wv = [Linear(n_embd, self.head_size, nonlin=False, use_bias=use_bias) for _ in range(n_head)]
+
+#         self.proj = Linear(n_embd, n_embd, nonlin=False, use_bias=use_bias)
+
+#     def __call__(self, x):
+#         n, embd_size = x.size() # this works for python lists, but not for values
+#         assert embd_size == self.n_embd
+#         #we need to project our input x to matrices wiq, wik, wiv (https://arxiv.org/pdf/1706.03762.pdf, page 5)
+#         # self.wq=self.wq(x)
+#         # self.wk=self.wk(x)
+#         # self.wv=self.wv(x)
+#         # q_proj=MatMul(q,wq)
+#         # k_proj=MatMul(k,wk)
+#         # v_proj=MatMul(v,wv)
+#         self.q = [self.wq[i](x) for i in range(self.n_head)] # (nh, n, hs)
+#         self.k = [self.wk[i](x) for i in range(self.n_head)] # (nh, n, hs)
+#         self.v = [self.wv[i](x) for i in range(self.n_head)] # (nh, n, hs)
+
+#         z = [MatMul(Scale(MatMul(self.q[i], self.k[i], transpose_b=True), math.sqrt(self.head_size)), self.v[i]) for i in range(self.n_head)]
+#         # concatenate z
+#         # mask z
+#         # softmax on z
+
+#         return self.proj(z)
+
+#     def parameters(self):
+#         return self.wq.parameters()+self.wk.parameters()+self.wv.parameters()
+#         + self.q.parameters()+self.k.parameters()+self.v.parameters()
+
+#     def __repr__(self):
+#         pass
+
+# class Concat(Module):
+#     #concatenate multiple matrices into one
+#     def __init__():
+#         pass
+#     def __call__():
+#         pass
+    
+# class MultiHeadAttention(Module):
+#     #TODO
+#     def __init__(self, n_embd,n_head,use_bias=False):
+#         assert n_embd%n_head==0
+#         self.n_embd=n_embd
+#         self.n_head=n_head
+#         self.single_head_dim=n_embd//n_head
+#         self.attention_layers=[CausalAttentionHead(self.single_head_dim,use_bias=use_bias) for _ in range(n_head)]
+#         self.wo=TrainableMatrix(n_embd,self.single_head_dim)
+#     def __call__(self,x):
+#         attn_outs=[self.attention_layers[i](x) for i in range(self.n_head)]
+#         attn_concat=Concat(attn_outs)
+#         out=MatMul(attn_concat,self.wo)
+#     def parameters(self):
+#         return [att.parameters() for att in self.attention_layers]+self.wo.parameters()
+#     def __repr__(self):
+#         pass
+
+
+# class LayerNorm(Module):
+#     #TODO
+#     pass
 
 # class Embedding(Module):
 #     def __init__(self,vocab_size,n_embd):
@@ -300,80 +395,3 @@ class LayerNorm(Module):
 #         pass
 #     def parameters():
 #         pass
-
-# class CrossEntropyLoss(Module):
-#     #TODO: check that everything is fine with logits vs self.logits, etc.
-#     def __init__(self,logits,values,reduction="sum"):
-#         #only supporting unweighted cross-entropy loss
-#         self.logits=logits
-#         self.values=values
-#         self.num_classes=len(logits)
-#         self.reduction=reduction
-#         assert(self.reduction in ["mean","sum"])
-#     def __call__(self,logits,values):
-#         #TODO: add normalization for numeric stability (should scale largest value to 1, but not sure how that affects backprop)
-#         #formula copied from https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-#         sum_exp=sum(l.exp() for l in logits)
-#         ls=[-math.log(logits[i].exp()/sum_exp)*values[i] for i in range self.num_classes]
-#         if self.reduction=="sum":
-#             return sum(ls)
-#         else:
-#             return sum(ls)/self.num_classes
-#     def parameters(self):
-#         return [l for l in self.logits]
-
-
-class Softmax(Module):
-    #TODO: use more numerically stable version where we divide everything by max value
-    def __init__(self):
-        pass
-
-    def __call__(self, values):
-        sum_exp = Value(0)
-        out_values = []
-        for val in values:
-            sum_exp+=val.exp()
-        for val in values:
-            out_values.append(val.exp()/sum_exp)
-        return out_values
-    
-class Sigmoid(Module):
-    def __init__(self):
-        pass
-    def __call__(self, values):
-        outs = []
-        for value in values:
-            outs.append(1 / (1 + (-value).exp()))
-        return outs
-
-class CrossEntropyLoss(Module):
-    #TODO: check that everything is fine with logits vs self.logits, etc.
-    def __init__(self, reduction="mean", epsilon=1e-8):
-        #only supporting unweighted cross-entropy loss
-        self.reduction = reduction
-        self.epsilon = epsilon
-        assert(self.reduction in ["mean","sum"])
-    def __call__(self, logits, values):
-        loss = Value(0)
-        num_classes = len(values)
-        for logit, label in zip(logits,values):
-            logit_clipped = logit.clip(self.epsilon,1-self.epsilon)
-            loss-=logit_clipped.log()*label
-        if self.reduction=="mean":
-            return loss/num_classes
-        return loss
-
-class BinaryCrossEntropyLoss(Module):
-    
-    def __init__(self):
-        pass
-
-    def __call__(self, logit, label):
-        if isinstance(logit, list):
-            logit = logit[0]
-        if isinstance(label, list):
-            label = label[0]
-       
-        assert isinstance(logit, Value) and isinstance(label, Value)
-        return -label * logit.log() -(1 - label) * (1 - logit).log()
-       

@@ -13,11 +13,12 @@ from micrograd.engine import Value
 
 class Metrics:
 
-    def __init__(self, metrics: List[str] = []):
+    def __init__(self, metrics: List[str] = [], name="train_metrics"):
         # check that metrics list consist of only valid metrics [loss, accuracy, precision, recall, f1]
         for metric in metrics:
             assert metric in ["loss", "accuracy"], f"Invalid metric {metric}"
 
+        self.name=name
         self.metrics = metrics
         self.loss_history = {}
         self.output_history = {}
@@ -35,12 +36,13 @@ class Metrics:
         self.output_history[f"Epoch {epoch + 1}"].append([predicted_class, labels_class])
 
     def report(self, epoch: int, total_epochs: int):
-        output = f"Epoch: {epoch + 1}/{total_epochs}"
+        output = f"{self.name} - epoch: {epoch + 1}/{total_epochs}"
         for metric in self.metrics:
             output += f" | {metric.capitalize()}: {self.calculate_metric_by_epoch(metric, epoch + 1):.4f}"
         output += "\n"
         output += "-" * len(output)
         print(output)
+        return output
         
 
     def calculate_metric_by_epoch(self, metric: str, epoch: int) -> float:
