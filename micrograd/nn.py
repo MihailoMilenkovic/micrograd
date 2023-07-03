@@ -142,6 +142,13 @@ class Conv2D(Module):
         return [p for filter in self.filters for p in filter.parameters()]
 
 
+class MaxPool2D(Module):
+    def __init__(self,input_size=(8,8),strides=(2,2)):
+        pass    
+    def call(self,x):
+        pass
+    def parameters(self):
+        pass
 
 class Softmax(Module):
     #TODO: use more numerically stable version where we divide everything by max value

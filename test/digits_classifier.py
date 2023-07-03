@@ -99,7 +99,10 @@ def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
                            Softmax())
         elif model_type=="cnn":
             #TODO: create conv2d and pooling layers
-            model=Sequential()
+            model=Sequential(
+                    Linear(in_neurons, hidden_dim, nonlin=True ,use_bias=use_bias),
+                    Linear(hidden_dim, out_neurons, nonlin=False ,use_bias=use_bias),
+                    Softmax())
             exit(1)
         
     else:
