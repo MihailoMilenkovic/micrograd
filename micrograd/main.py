@@ -99,7 +99,8 @@ def prepare_training(x_train, y_train, x_test, y_test, num_fold: int = None):
     save_path = create_directories(experiment_name)
     train(x_train, y_train, model, criterion, optimizer, train_metrics, epochs=config.epochs, 
                      save_path=save_path, model_name=model_name,
-                     evaluate_on_epoch=config.evaluate_on_epoch, x_test=x_test, y_test=y_test, test_metrics=test_metrics)
+                     evaluate_on_epoch=config.evaluate_on_epoch, x_test=x_test, y_test=y_test, test_metrics=test_metrics,
+                     num_fold=num_fold)
 
 def run_traning() -> Sequential:
     if config.training_mode == "split":

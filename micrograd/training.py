@@ -64,6 +64,5 @@ def test(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mod
     # make sure to reset any remaining gradients
     model.zero_grad()
     metrics.report(0, 1)
-    metrics.save_log_file("test_metrics.txt")
 
 
