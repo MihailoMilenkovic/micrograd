@@ -28,7 +28,9 @@ def load_model(path: str) -> Module:
         return model
 
 def train(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Module, optimizer,
-           metrics: Metrics, epochs: int = 10, save_path: str = None, model_name: str = "model.pkl") -> Sequential:
+           metrics: Metrics, epochs: int = 10, save_path: str = None, model_name: str = "model.pkl",
+           evaluate_on_epoch: bool = False, x_test: List[List[Value]] = None, y_test: List[Value] = None,
+           test_metrics: Metrics = None) -> Sequential:
     
     print(f"Number of training parameters: {len(model.parameters())}")
 
@@ -45,6 +47,9 @@ def train(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mo
             loss.destroy_graph(model.parameters())
 
         metrics.report(epoch, epochs)
+        if evaluate_on_epoch:
+            assert x_test is not None and y_test is not None and test_metrics is not None
+            test(x_test, y_test, model, criterion, test_metrics)
     save_model(model, os.path.join(save_path, model_name))
 
     return model
@@ -56,6 +61,8 @@ def test(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mod
         loss = criterion(pred, y_)
         metrics.record(loss, pred, y_, 0, i)
         loss.destroy_graph(model.parameters())
+    # make sure to reset any remaining gradients
+    model.zero_grad()
     metrics.report(0, 1)
 
 

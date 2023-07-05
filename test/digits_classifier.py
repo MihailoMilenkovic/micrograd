@@ -32,11 +32,16 @@ def preprocess_dataset():
     X=X/16 
     y = digits.target.reshape(-1, 1)  # Reshape to column vector
     # Convert the class labels to one-hot encodings
+
+    print("X shape:", X.shape)
+    print("y shape:", y.shape)
+
     encoder = OneHotEncoder()
     y = encoder.fit_transform(y).toarray()
 
     # Shuffle the dataset
     X, y = shuffle(X, y, random_state=42)
+
     return X,y
 
 def create_train_test_dataset(X,y):
@@ -90,7 +95,7 @@ def load_model(path: str) -> Module:
 def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
                 y_train: List[List[Value]], y_test: List[List[Value]],
                 model_type="mlp", use_bias=True, load: bool = False, 
-                 epochs: int = 10, learning_rate: float = 0.05):
+                 epochs: int = 10, learning_rate: float = 0.2):
     
     model_path=os.path.join(root_directory,f"models/digit_classification/{model_type}_model.pkl")
     if not load:
@@ -160,9 +165,9 @@ def train_model(x_train: List[List[Value]], x_test: List[List[Value]],
 
 
 if __name__=="__main__":
-    k_fold=True
+    k_fold=False
     X,y=preprocess_dataset()
-    print("X:",X,"y:",y)
+    # print("X:",X,"y:",y)
     if not k_fold:
         X_train, X_test, y_train, y_test=create_train_test_dataset(X,y)
         X_train,y_train=convert_to_micrograd(X_train,y_train)
