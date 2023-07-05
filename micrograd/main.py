@@ -28,10 +28,13 @@ from sklearn.model_selection import train_test_split
 def create_mlp_model(input_size: int, hidden_size: List[int], output_size: int,
                       nonlin: bool = True, use_bias: bool = True) -> Sequential:
     layers = []
-    layers.append(Linear(input_size, hidden_size[0], nonlin=nonlin, use_bias=use_bias))
-    for i in range(1, len(hidden_size)):
-        layers.append(Linear(hidden_size[i-1], hidden_size[i], nonlin=nonlin, use_bias=use_bias))
-    layers.append(Linear(hidden_size[-1], output_size, nonlin=False, use_bias=use_bias))
+    if len(hidden_size) == 0:
+        layers.append(Linear(input_size, output_size, nonlin=False, use_bias=use_bias))
+    else:
+        layers.append(Linear(input_size, hidden_size[0], nonlin=nonlin, use_bias=use_bias))
+        for i in range(1, len(hidden_size)):
+            layers.append(Linear(hidden_size[i-1], hidden_size[i], nonlin=nonlin, use_bias=use_bias))
+        layers.append(Linear(hidden_size[-1], output_size, nonlin=False, use_bias=use_bias))
     if output_size == 1:
         layers.append(Sigmoid())
     else:
