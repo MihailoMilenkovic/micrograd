@@ -20,12 +20,13 @@ class Dataset:
         self.mode = mode
         self.split_ratio = split_ratio
         self.k_fold = k_fold
-        self.x, self.y = self.create_dataset()
+        self.x, self.y = self.initialize_dataset()
 
     def get_whole_dataset(self):
+        x, y = self.convert_to_micrograd(self.x, self.y)
         return self.x, self.y
 
-    def create_dataset(self):
+    def initialize_dataset(self):
         # Load the digits dataset
         digits = load_digits()
 
@@ -48,6 +49,9 @@ class Dataset:
         # Fit and transform the labels into one-hot encoded vectors
         y = encoder.fit_transform(y)
 
+        return x, y
+        
+    def convert_to_micrograd(self, x, y):
         train_data = []
         train_labels = []
         for sample in x:
@@ -65,16 +69,18 @@ class Dataset:
     
     def get_train_test_split(self):
         x_train, x_test, y_train, y_test = train_test_split(self.x, self.y, test_size=1-self.split_ratio , random_state=42)
+        x_train, y_train = self.convert_to_micrograd(x_train, y_train)
+        x_test, y_test = self.convert_to_micrograd(x_test, y_test)
         return x_train, y_train, x_test, y_test
     
-    def get_k_fold_crossvalidation(self):
+    def get_cross_validation_splits(self):
         sss = StratifiedShuffleSplit(n_splits=self.k_fold, test_size=1/self.k_fold, random_state=42)
-        sss.get_n_splits(self.x, self.y)
-        print(sss)
         splits = []
-        for train_index, test_index in sss.split(self.x, self.y):
-            print("TRAIN:", train_index, "TEST:", test_index)
-            x_train, x_test = self.x[train_index], self.x[test_index]
-            y_train, y_test = self.y[train_index], self.y[test_index]
+
+        for train, test in sss.split(self.x, self.y):
+            x_train, x_test = self.x[train], self.x[test]
+            y_train, y_test = self.y[train], self.y[test]
+            x_train, y_train = self.convert_to_micrograd(x_train, y_train)
+            x_test, y_test = self.convert_to_micrograd(x_test, y_test)
             splits.append((x_train, y_train, x_test, y_test))
         return splits

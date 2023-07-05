@@ -11,7 +11,7 @@ training_mode = "split"
 split_ratio = 0.8
 
 # if training mode is cross
-k_fold = 10
+k_fold = 5
 
 # wheater to evaluate on each epoch
 evaluate_on_epoch = True
@@ -29,12 +29,12 @@ output_size = 10
 loss = "ce"
 
 # training parameters
-epochs = 20
+epochs = 3
 learning_rate = 0.03
 
 # choose optimizer from ["sgd", "adam"]
 optimizer = "sgd"
 
-# metrics to track [loss, accuracy]
+# metrics to track [loss, accuracy, mat]
 train_metrics = ["loss", "accuracy"]
-test_metrics = ["loss", "accuracy"]
+test_metrics = ["loss", "accuracy", "mat"]

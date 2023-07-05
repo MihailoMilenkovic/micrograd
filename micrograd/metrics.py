@@ -10,18 +10,19 @@ sys.path.append(root_directory)
 
 from micrograd.engine import Value
 
-
 class Metrics:
 
-    def __init__(self, metrics: List[str] = [], name="train_metrics"):
+    def __init__(self, metrics: List[str], num_labels: int, name="train_metrics"):
         # check that metrics list consist of only valid metrics [loss, accuracy, precision, recall, f1]
         for metric in metrics:
-            assert metric in ["loss", "accuracy"], f"Invalid metric {metric}"
+            assert metric in ["loss", "accuracy", "mat"], f"Invalid metric {metric}"
 
         self.name=name
         self.metrics = metrics
         self.loss_history = {}
         self.output_history = {}
+        self.num_labels = num_labels
+        self.log = ""
 
     def record(self, loss: float, preds: List[Value], y: List[Value], epoch: int, iteration: int):
         if iteration == 0:
@@ -37,14 +38,23 @@ class Metrics:
 
     def report(self, epoch: int, total_epochs: int):
         output = f"{self.name} - epoch: {epoch + 1}/{total_epochs}"
-        metrics_out={}
         for metric in self.metrics:
-            output += f" | {metric.capitalize()}: {self.calculate_metric_by_epoch(metric, epoch + 1):.4f}"
-            metrics_out[metric]=self.calculate_metric_by_epoch(metric, epoch + 1)
+            if metric != "mat":
+                output += f" | {metric.capitalize()}: {self.calculate_metric_by_epoch(metric, epoch + 1):.4f}"
         output += "\n"
         output += "-" * len(output)
+        output += "\n"
+        if "mat" in self.metrics:
+            # print matrix in a nice way
+            for row in self.calculate_metric_by_epoch("mat", epoch + 1):
+                row_string = ""
+                for num in row:
+                    row_string += f"{num:4}"
+                output += row_string + "\n"
+
         print(output)
-        return output,metrics_out
+        self.log += output + "\n"
+        return output
         
 
     def calculate_metric_by_epoch(self, metric: str, epoch: int) -> float:
@@ -52,6 +62,8 @@ class Metrics:
             return self.calculate_mean_loss_by_epoch(epoch)
         elif metric == "accuracy":
             return self.calculate_multiclass_accuracy_by_epoch(epoch)
+        elif metric == "mat":
+            return self.calculate_multiclass_confusion_matrix_by_epoch(epoch)
         return None
 
     def calculate_mean_loss_by_epoch(self, epoch: int) -> float:
@@ -69,4 +81,20 @@ class Metrics:
             if pred == y:
                 correct += 1
         return correct / len(results)
+    
+    def calculate_multiclass_confusion_matrix_by_epoch(self, epoch: int) -> List[List[float]]:
+        key = f"Epoch {epoch}"
+        results = self.output_history[key]
+        confusion_matrix = [[0 for _ in range(self.num_labels)] for _ in range(self.num_labels)]
+        for result in results:
+            pred = result[0]
+            y = result[1]
+            confusion_matrix[pred][y] += 1
+        return confusion_matrix
+    
+    def save_log_file(self, path: str):
+        with open(path, "w") as f:
+            f.write(self.log)
+    
+    
     

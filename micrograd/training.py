@@ -30,7 +30,7 @@ def load_model(path: str) -> Module:
 def train(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Module, optimizer,
            metrics: Metrics, epochs: int = 10, save_path: str = None, model_name: str = "model.pkl",
            evaluate_on_epoch: bool = False, x_test: List[List[Value]] = None, y_test: List[Value] = None,
-           test_metrics: Metrics = None) -> Sequential:
+           test_metrics: Metrics = None, fold_num: int = None) -> Sequential:
     
     print(f"Number of training parameters: {len(model.parameters())}")
 
@@ -51,8 +51,8 @@ def train(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mo
             assert x_test is not None and y_test is not None and test_metrics is not None
             test(x_test, y_test, model, criterion, test_metrics)
     save_model(model, os.path.join(save_path, model_name))
-
-    return model
+    metrics.save_log_file(os.path.join(save_path, f"metrics_{fold_num}.txt"))
+    test_metrics.save_log_file(os.path.join(save_path, f"test_metrics_{fold_num}.txt"))
 
 
 def test(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Module, metrics: Metrics):
@@ -64,6 +64,6 @@ def test(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mod
     # make sure to reset any remaining gradients
     model.zero_grad()
     metrics.report(0, 1)
-
+    metrics.save_log_file("test_metrics.txt")
 
 
