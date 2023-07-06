@@ -1,30 +1,30 @@
-test_metrics - epoch: 1/1 | Loss: 0.1332 | Accuracy: 0.5833
+test_metrics - epoch: 1/1 | Loss: 0.1327 | Accuracy: 0.4278
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0894 | Accuracy: 0.7778
+test_metrics - epoch: 1/1 | Loss: 0.1289 | Accuracy: 0.4278
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0660 | Accuracy: 0.8278
+test_metrics - epoch: 1/1 | Loss: 0.1298 | Accuracy: 0.4333
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0524 | Accuracy: 0.8556
+test_metrics - epoch: 1/1 | Loss: 0.1216 | Accuracy: 0.4444
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0441 | Accuracy: 0.8778
+test_metrics - epoch: 1/1 | Loss: 0.1188 | Accuracy: 0.4833
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0386 | Accuracy: 0.9000
+test_metrics - epoch: 1/1 | Loss: 0.1327 | Accuracy: 0.4667
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0347 | Accuracy: 0.9111
+test_metrics - epoch: 1/1 | Loss: 0.1228 | Accuracy: 0.5111
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0319 | Accuracy: 0.9167
+test_metrics - epoch: 1/1 | Loss: 0.1275 | Accuracy: 0.4778
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0295 | Accuracy: 0.9278
+test_metrics - epoch: 1/1 | Loss: 0.1433 | Accuracy: 0.4167
 ------------------------------------------------------------
 
-test_metrics - epoch: 1/1 | Loss: 0.0274 | Accuracy: 0.9222
+test_metrics - epoch: 1/1 | Loss: 0.1216 | Accuracy: 0.4833
 ------------------------------------------------------------
 

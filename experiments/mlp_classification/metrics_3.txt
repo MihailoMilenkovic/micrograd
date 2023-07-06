@@ -1,30 +1,30 @@
-train_metrics - epoch: 1/10 | Loss: 0.2237 | Accuracy: 0.2202
+train_metrics - epoch: 1/10 | Loss: 0.1703 | Accuracy: 0.3630
 --------------------------------------------------------------
 
-train_metrics - epoch: 2/10 | Loss: 0.1700 | Accuracy: 0.4317
+train_metrics - epoch: 2/10 | Loss: 0.1406 | Accuracy: 0.4335
 --------------------------------------------------------------
 
-train_metrics - epoch: 3/10 | Loss: 0.1377 | Accuracy: 0.5764
+train_metrics - epoch: 3/10 | Loss: 0.1412 | Accuracy: 0.4378
 --------------------------------------------------------------
 
-train_metrics - epoch: 4/10 | Loss: 0.1138 | Accuracy: 0.6494
+train_metrics - epoch: 4/10 | Loss: 0.1351 | Accuracy: 0.4372
 --------------------------------------------------------------
 
-train_metrics - epoch: 5/10 | Loss: 0.0972 | Accuracy: 0.7044
+train_metrics - epoch: 5/10 | Loss: 0.1262 | Accuracy: 0.4564
 --------------------------------------------------------------
 
-train_metrics - epoch: 6/10 | Loss: 0.0854 | Accuracy: 0.7372
+train_metrics - epoch: 6/10 | Loss: 0.1407 | Accuracy: 0.4267
 --------------------------------------------------------------
 
-train_metrics - epoch: 7/10 | Loss: 0.0763 | Accuracy: 0.7650
+train_metrics - epoch: 7/10 | Loss: 0.1509 | Accuracy: 0.3853
 --------------------------------------------------------------
 
-train_metrics - epoch: 8/10 | Loss: 0.0690 | Accuracy: 0.7885
+train_metrics - epoch: 8/10 | Loss: 0.1686 | Accuracy: 0.3383
 --------------------------------------------------------------
 
-train_metrics - epoch: 9/10 | Loss: 0.0628 | Accuracy: 0.8132
+train_metrics - epoch: 9/10 | Loss: 0.1564 | Accuracy: 0.3488
 --------------------------------------------------------------
 
-train_metrics - epoch: 10/10 | Loss: 0.0578 | Accuracy: 0.8268
+train_metrics - epoch: 10/10 | Loss: 0.1573 | Accuracy: 0.3599
 ---------------------------------------------------------------
 

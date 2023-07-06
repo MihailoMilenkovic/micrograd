@@ -1,16 +1,18 @@
 import math
 
 class Value:
+    curr_id=0
     """ stores a single scalar value and its gradient """
 
     def __init__(self, data, _children=(), _op=''):
         self.data = data
         self.grad = 0
+        self.id=int(Value.curr_id)
+        Value.curr_id+=1
         # internal variables used for autograd graph construction
         self._backward = lambda: None
         self._prev = set(_children)
         self._op = _op # the op that produced this node, for graphviz / debugging / etc
-
     def __add__(self, other):
         other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data + other.data, (self, other), '+')
