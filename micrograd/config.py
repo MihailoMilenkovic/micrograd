@@ -22,7 +22,7 @@ load_path = "./experiments/mlp_classification/mlp_classification-2023-07-02_23:2
 
 # model parameters
 input_size = 64
-hidden_size = [10]
+hidden_size = [10,10]
 output_size = 10
 
 # loss function [bce, ce]
@@ -30,10 +30,10 @@ loss = "ce"
 
 # training parameters
 epochs = 10
-learning_rate = 0.1
+learning_rate = 0.001
 
 # choose optimizer from ["sgd", "adam"]
-optimizer = "sgd"
+optimizer = "adam"
 
 # metrics to track [loss, accuracy, mat]
 train_metrics = ["loss", "accuracy"]

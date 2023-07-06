@@ -216,6 +216,9 @@ class Softmax(Module):
     def __call__(self, values):
         sum_exp = Value(0)
         out_values = []
+        # max_val=-1e30
+        # for val in values:
+        #     max_val=max(val,max_val)
         for val in values:
             sum_exp+=val.exp()
         for val in values:
