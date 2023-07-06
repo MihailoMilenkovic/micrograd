@@ -89,13 +89,14 @@ def prepare_training(x_train, y_train, x_test, y_test, num_fold: int = None):
             print(model)
     else:
         model = create_mlp_model(config.input_size, config.hidden_size, config.output_size)
+        print(f"Model size: [{config.input_size}, {config.hidden_size}, {config.output_size}]")
     optimizer = create_optimizer(config.optimizer, config.learning_rate)
     criterion = create_criteria(config.loss)
     train_metrics = create_metrics(config.train_metrics, config.output_size, name="train_metrics")
     test_metrics = create_metrics(config.test_metrics, config.output_size, name="test_metrics")
     experiment_name = config.experiment_name
     model_name = experiment_name + '-{date:%Y-%m-%d_%H:%M:%S}{fold}.txt'.format(date=datetime.datetime.now(), 
-                                                                                   fold=str(num_fold) if num_fold is not None else "") + ".pkl"
+                                                                                fold=str(num_fold) if num_fold is not None else "") + ".pkl"
     save_path = create_directories(experiment_name)
     train(x_train, y_train, model, criterion, optimizer, train_metrics, epochs=config.epochs, 
                      save_path=save_path, model_name=model_name,
@@ -106,22 +107,14 @@ def run_traning() -> Sequential:
     if config.training_mode == "split":
         x_train, y_train, x_test, y_test = Dataset(mode="split").get_train_test_split()
         prepare_training(x_train, y_train, x_test, y_test)
-        # train(x_train, y_train, model, criterion, optimizer, train_metrics, epochs=config.epochs, 
-        #              save_path=save_path, model_name=model_name,
-        #              evaluate_on_epoch=config.evaluate_on_epoch, x_test=x_test, y_test=y_test, test_metrics=test_metrics)
     elif config.training_mode == "cross":
-        splits = Dataset(mode="cross").get_cross_validation_splits()
+        splits = Dataset(mode="cross", k_fold=config.k_fold).get_cross_validation_splits()
         for i, split in enumerate(splits):
             print(f"Running fold {i+1}")
             x_train, y_train, x_test, y_test = split
             prepare_training(x_train, y_train, x_test, y_test, num_fold=i+1)
-            # train(x_train, y_train, model, criterion, optimizer, train_metrics, epochs=config.epochs, 
-            #               save_path=save_path, model_name=model_name,
-            #               evaluate_on_epoch=config.evaluate_on_epoch, x_test=x_test, y_test=y_test, test_metrics=test_metrics)
             print(f"Finished fold {i+1}")
             print("===============================================================")
-        
-    
     return None
 
 def run_testing():

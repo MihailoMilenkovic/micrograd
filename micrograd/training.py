@@ -53,13 +53,14 @@ def train(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Mo
     save_model(model, os.path.join(save_path, model_name))
     metrics.save_log_file(os.path.join(save_path, f"metrics_{fold_num}.txt"))
     test_metrics.save_log_file(os.path.join(save_path, f"test_metrics_{fold_num}.txt"))
+    test_metrics.save_history(os.path.join(save_path, f"test_history_{fold_num}.txt"))
 
 
 def test(x: List[List[Value]], y: List[Value], model: Sequential, criterion: Module, metrics: Metrics):
     for i, (x_, y_) in enumerate(zip(x, y)):
         pred = model(x_)
         loss = criterion(pred, y_)
-        metrics.record(loss, pred, y_, 0, i)
+        metrics.record(loss, pred, y_, 0, i, x=x_)
         loss.destroy_graph(model.parameters())
     # make sure to reset any remaining gradients
     model.zero_grad()

@@ -21,13 +21,15 @@ class Metrics:
         self.metrics = metrics
         self.loss_history = {}
         self.output_history = {}
+        self.input_history = {}
         self.num_labels = num_labels
         self.log = ""
 
-    def record(self, loss: float, preds: List[Value], y: List[Value], epoch: int, iteration: int):
+    def record(self, loss: float, preds: List[Value], y: List[Value], epoch: int, iteration: int, x: List[Value] = None):
         if iteration == 0:
             self.loss_history[f"Epoch {epoch + 1}"] = []
             self.output_history[f"Epoch {epoch + 1}"] = []
+            self.input_history[f"Epoch {epoch + 1}"] = []
 
         self.loss_history[f"Epoch {epoch + 1}"].append(loss.data)
         predicted_probs = [p.data for p in preds]
@@ -35,6 +37,9 @@ class Metrics:
         labels_class = [l.data for l in y]
         labels_class = labels_class.index(1)
         self.output_history[f"Epoch {epoch + 1}"].append([predicted_class, labels_class])
+
+        if x is not None:
+            self.input_history[f"Epoch {epoch + 1}"].append(self.convert_micrograd_values_to_list(x))
 
     def report(self, epoch: int, total_epochs: int):
         output = f"{self.name} - epoch: {epoch + 1}/{total_epochs}"
@@ -56,6 +61,8 @@ class Metrics:
         self.log += output + "\n"
         return output
         
+    def convert_micrograd_values_to_list(self, micrograd_values: List[Value]) -> List[float]:
+        return [v.data for v in micrograd_values]
 
     def calculate_metric_by_epoch(self, metric: str, epoch: int) -> float:
         if metric == "loss":
@@ -95,6 +102,11 @@ class Metrics:
     def save_log_file(self, path: str):
         with open(path, "w") as f:
             f.write(self.log)
+
+    def save_history(self, path: str):
+        with open(path, "w") as f:
+            f.write(str(self.output_history) + "\n")
+            f.write(str(self.input_history) + "\n")
     
     
     
