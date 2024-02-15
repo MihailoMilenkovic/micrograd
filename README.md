@@ -1,4 +1,4 @@
-# CNN from scratch
+# Micrograd
 
 ## Usage
     
